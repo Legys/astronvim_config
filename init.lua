@@ -248,6 +248,7 @@ local config = {
                         -- https://github.com/jose-elias-alvarez/null-ls.nvim/tree/main/lua/null-ls/builtins/formatting
                         -- https://github.com/jose-elias-alvarez/null-ls.nvim/tree/main/lua/null-ls/builtins/diagnostics
                         local null_ls = require "null-ls"
+                        local augroup = vim.api.nvim_create_augroup("LspFormatting", {})
 
                         config.sources = {
                                 -- Set a formatter
@@ -265,13 +266,24 @@ local config = {
                                         only_local = "node_modules/.bin"
                                 })
                         }
-                        -- config.on_attach = function(client)
-                        --         if client.resolved_capabilities.document_formatting then
-                        --                 -- vim.cmd "autocmd BufWritePre <buffer> lua vim.lsp.buf.formatting_sync()"
-                        --         end
-                        -- end
-                        --
 
+                        config.on_attach = function(client, bufnr)
+
+                                if client.supports_method("textDocument/formatting") then
+                                        vim.api.nvim_clear_autocmds({ group = augroup, buffer = bufnr })
+                                        vim.api.nvim_create_autocmd("BufWritePre", {
+                                                group = augroup,
+                                                buffer = bufnr,
+                                                callback = function()
+                                                        -- on 0.8, you should use vim.lsp.buf.format({ bufnr = bufnr }) instead
+                                                        vim.lsp.buf.format({ bufnr = bufnr,
+                                                                filter = function(filterClient)
+                                                                        return filterClient.name == "null-ls"
+                                                                end })
+                                                end,
+                                        })
+                                end
+                        end
                         return config -- return final config table
                 end,
                 treesitter = { -- overrides `require("treesitter").setup(...)`
